@@ -46,7 +46,7 @@ func (client *Client) FindEmails(dominio string) ([]string, error) {
 }
 
 // GetToken solicita token de autorização
-func (client *Client) GetToken() error {
+func (client *Client) UpdateToken() error {
 	form := make(map[string]string)
 	form["grant_type"] = "client_credentials"
 	form["client_id"] = client.ID
