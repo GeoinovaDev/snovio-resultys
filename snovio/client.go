@@ -1,7 +1,10 @@
 package snovio
 
 import (
+	"log"
+
 	"git.resultys.com.br/lib/lower/convert"
+	"git.resultys.com.br/lib/lower/convert/decode"
 	"git.resultys.com.br/lib/lower/net/request"
 )
 
@@ -24,28 +27,31 @@ func New(id string, secret string) *Client {
 
 // FindEmails pesqisa email por dominio
 // Return array, error
-func (client *Client) FindEmails(dominio string) ([]string, error) {
+func (client *Client) FindEmails(dominio string) ([]Email, error) {
 	form := make(map[string]string)
 
-	url := "https://app.snov.io/restapi/get-domain-emails-with-info?type=all&limit=100&domain=" + dominio
+	url := "https://app.snov.io/restapi/get-domain-emails-with-info?type=all&limit=5&domain=" + dominio
 	response, err := request.New(url).AddHeader("Authorization", "Bearer "+client.AccessToken).Post(form)
 	if err != nil {
 		return nil, err
 	}
 
-	emails := []string{}
-	json := make(map[string]interface{})
-	convert.StringToJSON(response, &json)
-	jsonEmails := json["emails"].([]interface{})
-	for _, value := range jsonEmails {
-		result := value.(map[string]interface{})
-		emails = append(emails, result["email"].(string))
-	}
+	protocol := Protocol{}
+	decode.JSON(response, &protocol)
+	log.Println(protocol.Emails)
+	// emails := []string{}
+	// json := make(map[string]interface{})
+	// convert.StringToJSON(response, &json)
+	// jsonEmails := json["emails"].([]interface{})
+	// for _, value := range jsonEmails {
+	// 	result := value.(map[string]interface{})
+	// 	emails = append(emails, result["email"].(string))
+	// }
 
-	return emails, nil
+	return protocol.Emails, nil
 }
 
-// GetToken solicita token de autorização
+// UpdateToken solicita token de autorização
 func (client *Client) UpdateToken() error {
 	form := make(map[string]string)
 	form["grant_type"] = "client_credentials"
