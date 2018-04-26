@@ -1,8 +1,6 @@
 package snovio
 
 import (
-	"log"
-
 	"git.resultys.com.br/lib/lower/convert"
 	"git.resultys.com.br/lib/lower/convert/decode"
 	"git.resultys.com.br/lib/lower/net/request"
@@ -38,7 +36,6 @@ func (client *Client) FindEmails(dominio string) ([]Email, error) {
 
 	protocol := Protocol{}
 	decode.JSON(response, &protocol)
-	log.Println(protocol.Emails)
 	// emails := []string{}
 	// json := make(map[string]interface{})
 	// convert.StringToJSON(response, &json)
