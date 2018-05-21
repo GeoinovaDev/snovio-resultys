@@ -36,14 +36,6 @@ func (client *Client) FindEmails(dominio string) ([]Email, error) {
 
 	protocol := Protocol{}
 	decode.JSON(response, &protocol)
-	// emails := []string{}
-	// json := make(map[string]interface{})
-	// convert.StringToJSON(response, &json)
-	// jsonEmails := json["emails"].([]interface{})
-	// for _, value := range jsonEmails {
-	// 	result := value.(map[string]interface{})
-	// 	emails = append(emails, result["email"].(string))
-	// }
 
 	return protocol.Emails, nil
 }
