@@ -1,6 +1,8 @@
 package snovio
 
 import (
+	"strconv"
+
 	"git.resultys.com.br/lib/lower/convert"
 	"git.resultys.com.br/lib/lower/convert/decode"
 	"git.resultys.com.br/lib/lower/net/request"
@@ -25,10 +27,10 @@ func New(id string, secret string) *Client {
 
 // FindEmails pesqisa email por dominio
 // Return array, error
-func (client *Client) FindEmails(dominio string) ([]Email, error) {
+func (client *Client) FindEmails(dominio string, limit int) ([]Email, error) {
 	form := make(map[string]string)
 
-	url := "https://app.snov.io/restapi/get-domain-emails-with-info?type=all&limit=5&domain=" + dominio
+	url := "https://app.snov.io/restapi/get-domain-emails-with-info?type=all&limit=" + strconv.Itoa(limit) + "&domain=" + dominio
 	response, err := request.New(url).AddHeader("Authorization", "Bearer "+client.AccessToken).Post(form)
 	if err != nil {
 		return nil, err
