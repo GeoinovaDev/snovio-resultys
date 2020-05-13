@@ -3,8 +3,11 @@ package snovio
 import (
 	"strconv"
 
+	"git.resultys.com.br/lib/lower/time/interval"
+
 	"git.resultys.com.br/lib/lower/convert"
 	"git.resultys.com.br/lib/lower/convert/decode"
+	"git.resultys.com.br/lib/lower/exec/try"
 	"git.resultys.com.br/lib/lower/net/request"
 )
 
@@ -27,19 +30,133 @@ func New(id string, secret string) *Client {
 
 // FindEmails pesqisa email por dominio
 // Return array, error
-func (client *Client) FindEmails(dominio string, limit int) ([]Email, error) {
+func (client *Client) FindEmails(dominio string, limit int) (_emails []Email, _err error) {
 	form := make(map[string]string)
 
-	url := "https://app.snov.io/restapi/get-domain-emails-with-info?type=all&limit=" + strconv.Itoa(limit) + "&domain=" + dominio
-	response, err := request.New(url).AddHeader("Authorization", "Bearer "+client.AccessToken).Post(form)
+	url := "https://api.snov.io/v1/get-domain-emails-with-info?offset=0&type=all&limit=" + strconv.Itoa(limit) + "&domain=" + dominio
+	try.New().SetTentativas(3).Run(func() {
+		response, err := request.New(url).SetTimeout(15).AddHeader("Authorization", "Bearer "+client.AccessToken).Post(form)
+		if err != nil {
+			panic(err)
+		}
+
+		protocol := Protocol{}
+		decode.JSON(response, &protocol)
+
+		_emails = protocol.Emails
+		_err = nil
+	}).Catch(func(msg string) {
+		_emails = nil
+		_err = newError(msg)
+	})
+
+	return
+}
+
+// AddEmailVerification ...
+func (client *Client) AddEmailVerification(email string) (_result bool, _err error) {
+	form := make(map[string]string)
+	form["access_token"] = client.AccessToken
+
+	url := "https://api.snov.io/v1/add-emails-to-verification?emails[]=" + email
+	try.New().SetTentativas(3).Run(func() {
+		response, err := request.New(url).SetTimeout(3).AddHeader("access_token", client.AccessToken).Post(form)
+		if err != nil {
+			panic(err)
+		}
+
+		protocol := make(map[string]map[string]bool)
+		decode.JSON(response, &protocol)
+
+		if protocol[email]["sent"] {
+			_result = true
+			_err = nil
+		}
+	}).Catch(func(msg string) {
+		_result = false
+		_err = newError(msg)
+	})
+
+	return
+}
+
+// CheckEmailStatus ...
+func (client *Client) CheckEmailStatus(email string) (_result ProtocolStatus, _err error) {
+	url := "https://api.snov.io/v1/get-emails-verification-status?emails[]=" + email
+	form := make(map[string]string)
+	form["access_token"] = client.AccessToken
+
+	try.New().SetTentativas(3).Run(func() {
+		response, err := request.New(url).SetTimeout(3).AddHeader("access_token", client.AccessToken).Post(form)
+		if err != nil {
+			panic(err)
+		}
+
+		protocol := map[string]ProtocolStatus{}
+		decode.JSON(response, &protocol)
+
+		if _, ok := protocol[email]; !ok {
+			panic("Email " + email + " não retornado pelo https://api.snov.io/v1/get-emails-verification-status")
+		}
+
+		_result = protocol[email]
+		_err = nil
+	}).Catch(func(msg string) {
+		_result = ProtocolStatus{}
+		_err = newError(msg)
+	})
+
+	return
+}
+
+// CheckEmailValid ...
+func (client *Client) CheckEmailValid(email string) (_result bool, _err error) {
+	check, err := client.CheckEmailStatus(email)
 	if err != nil {
-		return nil, err
+		_result = false
+		_err = err
+		return
 	}
 
-	protocol := Protocol{}
-	decode.JSON(response, &protocol)
+	if check.Status.Identifier == "not_verified" {
+		result, err := client.AddEmailVerification(email)
+		if err != nil {
+			_result = false
+			_err = err
+			return
+		}
 
-	return protocol.Emails, nil
+		if result {
+			waiting := true
+
+			interval.New().Wait(10, func() {
+				waiting = false
+			})
+
+			for waiting {
+				check, err = client.CheckEmailStatus(email)
+				if err != nil {
+					_result = false
+					_err = newError("Não foi possível checar o status do email " + email)
+					return
+				}
+
+				if check.Status.Identifier == "in_progress" {
+					continue
+				}
+
+				break
+			}
+		}
+	}
+
+	if check.Status.Identifier == "complete" {
+		_result = check.Data.SMTPStatus == "valid"
+		_err = nil
+		return
+	}
+
+	return
 }
 
 // UpdateToken solicita token de autorização
@@ -49,7 +166,7 @@ func (client *Client) UpdateToken() error {
 	form["client_id"] = client.ID
 	form["client_secret"] = client.Secret
 
-	response, err := request.New("https://app.snov.io/oauth/access_token").Post(form)
+	response, err := request.New("https://api.snov.io/v1/oauth/access_token").Post(form)
 	if err != nil {
 		return err
 	}
