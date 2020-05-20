@@ -110,10 +110,10 @@ func (client *Client) CheckEmailStatus(email string) (_result ProtocolStatus, _e
 }
 
 // CheckEmailValid ...
-func (client *Client) CheckEmailValid(email string) (_result bool, _err error) {
+func (client *Client) CheckEmailValid(email string) (_result string, _err error) {
 	check, err := client.CheckEmailStatus(email)
 	if err != nil {
-		_result = false
+		_result = "unknown"
 		_err = err
 		return
 	}
@@ -121,7 +121,7 @@ func (client *Client) CheckEmailValid(email string) (_result bool, _err error) {
 	if check.Status.Identifier == "not_verified" {
 		result, err := client.AddEmailVerification(email)
 		if err != nil {
-			_result = false
+			_result = "unknown"
 			_err = err
 			return
 		}
@@ -136,7 +136,7 @@ func (client *Client) CheckEmailValid(email string) (_result bool, _err error) {
 			for waiting {
 				check, err = client.CheckEmailStatus(email)
 				if err != nil {
-					_result = false
+					_result = "unknown"
 					_err = newError("Não foi possível checar o status do email " + email)
 					return
 				}
@@ -151,7 +151,13 @@ func (client *Client) CheckEmailValid(email string) (_result bool, _err error) {
 	}
 
 	if check.Status.Identifier == "complete" {
-		_result = check.Data.SMTPStatus == "valid"
+		if check.Data.SMTPStatus == "valid" {
+			_result = "verified"
+		} else if check.Data.SMTPStatus == "not_valid" {
+			_result = "notVerified"
+		} else {
+			_result = "unknown"
+		}
 		_err = nil
 		return
 	}
