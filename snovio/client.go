@@ -31,11 +31,9 @@ func New(id string, secret string) *Client {
 // FindEmails pesqisa email por dominio
 // Return array, error
 func (client *Client) FindEmails(dominio string, limit int) (_emails []Email, _err error) {
-	form := make(map[string]string)
-
-	url := "https://api.snov.io/v1/get-domain-emails-with-info?offset=0&type=all&limit=" + strconv.Itoa(limit) + "&domain=" + dominio
+	url := "https://api.snov.io/v2/domain-emails-with-info?lastId=0&type=all&limit=" + strconv.Itoa(limit) + "&domain=" + dominio + "&access_token=" + client.AccessToken
 	try.New().SetTentativas(3).Run(func() {
-		response, err := request.New(url).SetTimeout(15).AddHeader("Authorization", "Bearer "+client.AccessToken).Post(form)
+		response, err := request.New(url).SetTimeout(15).Get()
 		if err != nil {
 			panic(err)
 		}
