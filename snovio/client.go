@@ -3,12 +3,11 @@ package snovio
 import (
 	"strconv"
 
-	"git.resultys.com.br/lib/lower/time/interval"
-
-	"git.resultys.com.br/lib/lower/convert"
-	"git.resultys.com.br/lib/lower/convert/decode"
-	"git.resultys.com.br/lib/lower/exec/try"
-	"git.resultys.com.br/lib/lower/net/request"
+	"github.com/GeoinovaDev/lower-resultys/time/interval"
+	"github.com/GeoinovaDev/lower-resultys/convert"
+	"github.com/GeoinovaDev/lower-resultys/convert/decode"
+	"github.com/GeoinovaDev/lower-resultys/exec/try"
+	"github.com/GeoinovaDev/lower-resultys/net/request"
 )
 
 // Client struct
